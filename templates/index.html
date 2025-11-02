@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="vi">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Nhận Diện Ung Thư Da</title>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --primary: #4361ee;
+      --success: #06d6a0;
+      --danger: #ef476f;
+      --warning: #ffd166;
+      --dark: #121212;
+      --light: #f8f9fa;
+      --gray: #6c757d;
+      --border: #dee2e6;
+    }
+
+    * {
+      font-family: 'Inter', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+      min-height: 100vh;
+      padding-bottom: 80px;
+    }
+
+    /* Header */
+    header {
+      background: linear-gradient(135deg, var(--primary), #3f37c9);
+      color: white;
+      box-shadow: 0 10px 30px rgba(67, 97, 238, 0.4);
+      border-radius: 0 0 24px 24px;
+      margin-bottom: 2rem;
+    }
+
+    /* Cards */
+    .card {
+      border: none;
+      border-radius: 20px;
+      box-shadow: 0 12px 40px rgba(0, 0, 0, 0.1);
+      transition: all 0.3s ease;
+      overflow: hidden;
+    }
+
+    .card:hover {
+      transform: translateY(-8px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.15);
+    }
+
+    .card-header {
+      font-weight: 700;
+      font-size: 1.15rem;
+      padding: 1.5rem 2rem;
+      border: none;
+    }
+
+    /* Buttons */
+    .btn {
+      border-radius: 16px;
+      font-weight: 600;
+      padding: 0.75rem 1.5rem;
+      transition: all 0.3s ease;
+      border: none;
+    }
+
+    .btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary), #3f37c9);
+    }
+
+    .btn-success {
+      background: linear-gradient(135deg, var(--success), #048f6e);
+    }
+
+    /* Image Preview */
+    .image-preview {
+      background: linear-gradient(145deg, #f8f9fa, #e9ecef);
+      border: 2px dashed #dee2e6;
+      border-radius: 16px;
+      min-height: 200px;
+      transition: all 0.3s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+
+    .image-preview:not(.empty) {
+      border-color: var(--success);
+      background: linear-gradient(145deg, #f0fdf4, #dcfce7);
+    }
+
+    .image-preview img {
+      max-height: 220px;
+      border-radius: 12px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+      transition: transform 0.4s ease;
+    }
+
+    .image-preview img:hover {
+      transform: scale(1.05);
+    }
+
+    .image-preview.empty::after {
+      content: "Chọn hoặc chụp ảnh để bắt đầu";
+      color: var(--gray);
+      font-size: 1.1rem;
+      font-weight: 500;
+    }
+
+    /* Video */
+    #video {
+      width: 100%;
+      max-height: 320px;
+      object-fit: cover;
+      border-radius: 16px;
+      box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    /* Result */
+    .result-card {
+      animation: fadeInUp 0.5s ease;
+      border: 2px solid #fee2e2 !important;
+      background: linear-gradient(135deg, #fef2f2, #fecaca) !important;
+    }
+
+    .result-badge {
+      font-size: 1.1rem;
+      padding: 0.75rem 1.25rem;
+      border-radius: 50px;
+      font-weight: 700;
+    }
+
+    .result-badge.mel {
+      background: linear-gradient(135deg, #ef4444, #dc2626);
+      color: white;
+    }
+
+    .result-badge.bcc {
+      background: linear-gradient(135deg, #f59e0b, #d97706);
+      color: white;
+    }
+
+    .result-badge.akiec {
+      background: linear-gradient(135deg, #f97316, #ea580c);
+      color: white;
+    }
+
+    .result-badge.bkl,
+    .result-badge.df,
+    .result-badge.nv,
+    .result-badge.vasc {
+      background: linear-gradient(135deg, var(--success), #059669);
+      color: white;
+    }
+
+    /* Chat */
+    #chatContainer {
+      background: linear-gradient(145deg, #ffffff, #f8fafc);
+      border-radius: 20px;
+      padding: 1.5rem;
+      height: 450px;
+      overflow-y: auto;
+      border: 1px solid #e2e8f0;
+      box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.05);
+      scrollbar-width: thin;
+      scrollbar-color: #cbd5e1 #f1f5f9;
+    }
+
+    #chatContainer::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #chatContainer::-webkit-scrollbar-track {
+      background: #f1f5f9;
+      border-radius: 10px;
+    }
+
+    #chatContainer::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 10px;
+    }
+
+    #chatContainer::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+
+    .message {
+      margin-bottom: 1rem;
+      padding: 1rem 1.25rem;
+      border-radius: 20px;
+      max-width: 90%;
+      line-height: 1.6;
+      animation: messageSlide 0.3s ease;
+    }
+
+    .message.user {
+      background: linear-gradient(135deg, var(--primary), #3b69e7);
+      color: white;
+      margin-left: auto;
+      border-bottom-right-radius: 8px;
+      box-shadow: 0 4px 12px rgba(67, 97, 238, 0.3);
+    }
+
+    .message.ai {
+      background: linear-gradient(135deg, #f8fafc, #e2e8f0);
+      color: #1e293b;
+      margin-right: auto;
+      border-bottom-left-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      border-left: 4px solid var(--success);
+    }
+
+    /* Chat formatting */
+    .message strong {
+      color: var(--danger);
+      font-weight: 700;
+    }
+
+    .message .text-primary {
+      color: var(--primary) !important;
+    }
+
+    .message br {
+      display: block;
+      margin: 0.5rem 0;
+    }
+
+    .message small {
+      opacity: 0.7;
+      font-style: italic;
+    }
+
+    /* Loading */
+    .spinner-border {
+      width: 3rem;
+      height: 3rem;
+    }
+
+    #loading {
+      animation: pulse 1.5s infinite;
+    }
+
+    /* Footer */
+    footer {
+      background: linear-gradient(135deg, var(--dark), #1f2937);
+      color: #94a3b8;
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      padding: 1.25rem 0;
+      text-align: center;
+      box-shadow: 0 -4px 20px rgba(0, 0, 0, 0.2);
+      z-index: 1000;
+    }
+
+    /* Animations */
+    @keyframes fadeInUp {
+      from {
+        opacity: 0;
+        transform: translateY(20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes messageSlide {
+      from {
+        opacity: 0;
+        transform: translateX(-20px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateX(0);
+      }
+    }
+
+    @keyframes pulse {
+
+      0%,
+      100% {
+        opacity: 1;
+      }
+
+      50% {
+        opacity: 0.5;
+      }
+    }
+
+    /* Responsive */
+    @media (max-width: 768px) {
+      .container-fluid {
+        padding: 1rem !important;
+      }
+
+      #video {
+        max-height: 280px;
+      }
+
+      .message {
+        max-width: 95%;
+        font-size: 0.95rem;
+      }
+
+      footer {
+        padding: 1rem 0 1rem 0;
+        font-size: 0.85rem;
+      }
+    }
+  </style>
+</head>
+
+<body>
+  <div class="container-fluid px-3 px-md-5">
+    <!-- HEADER -->
+    <header class="text-center py-5 mb-5">
+      <i class="fas fa-brain fa-3x mb-3 text-white-50"></i>
+      <h1 class="mb-3 fw-bold display-5">AI NHẬN DIỆN UNG THƯ DA</h1>
+      <p class="mb-0 fs-5 opacity-90">ResNet50 Fine-tuned + Gemini RAG</p>
+    </header>
+
+    <div class="row g-4">
+      <!-- CỘT 1: NHẬN DIỆN -->
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header text-white" style="background: linear-gradient(135deg, #4361ee, #3f37c9);">
+            <i class="fas fa-search-plus me-2"></i>
+            <h3 class="mb-0 d-inline">Nhận Diện Bệnh</h3>
+          </div>
+          <div class="card-body p-4">
+
+            <!-- Chọn phương thức -->
+            <div class="mb-4">
+              <label class="form-label fw-bold fs-5 mb-3 d-block">Chọn cách nhập ảnh:</label>
+              <div class="btn-group w-100" role="group">
+                <input type="radio" class="btn-check" name="inputMethod" id="upload" checked>
+                <label class="btn btn-outline-primary w-50" for="upload">
+                  <i class="fas fa-upload me-1"></i>Tải ảnh
+                </label>
+                <input type="radio" class="btn-check" name="inputMethod" id="camera">
+                <label class="btn btn-outline-primary w-50" for="camera">
+                  <i class="fas fa-camera me-1"></i>Chụp ảnh (Máy nội soi)
+                </label>
+              </div>
+            </div>
+
+            <!-- 1. TẢI ẢNH -->
+            <div id="uploadSection">
+              <div class="mb-4">
+                <input type="file" id="imageUpload" class="form-control form-control-lg" accept="image/*">
+              </div>
+              <div id="uploadPreview" class="image-preview empty"></div>
+              <button id="analyzeUploadBtn" class="btn btn-primary w-100 mt-4 py-3 fs-5 fw-bold" disabled>
+                <i class="fas fa-brain me-2"></i>Phân tích bằng AI
+              </button>
+            </div>
+
+            <!-- 2. CHỤP ẢNH -->
+            <div id="cameraSection" style="display:none;">
+              <video id="video" autoplay playsinline muted></video>
+              <canvas id="canvas" style="display:none;"></canvas>
+              <div id="capturedPreview" class="image-preview empty mt-4"></div>
+              <button id="captureAndAnalyzeBtn" class="btn btn-success w-100 mt-4 py-3 fs-5 fw-bold">
+                <i class="fas fa-camera me-2"></i>Chụp & Phân tích ngay
+              </button>
+            </div>
+
+            <!-- Loading -->
+            <div id="loading" class="text-center mt-5 pt-4" style="display:none;">
+              <div class="spinner-border text-primary mb-3" role="status"></div>
+              <h5 class="text-primary fw-bold">Đang phân tích ảnh bằng AI...</h5>
+              <p class="text-muted">ResNet50 đang xử lý...</p>
+            </div>
+
+            <!-- Result -->
+            <div id="result" class="mt-4" style="display:none;"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- CỘT 2: CHATBOT -->
+      <div class="col-lg-6">
+        <div class="card h-100">
+          <div class="card-header text-white" style="background: linear-gradient(135deg, #06d6a0, #048f6e);">
+            <i class="fas fa-robot me-2"></i>
+            <h3 class="mb-0 d-inline">Trợ Lý Tư Vấn AI</h3>
+          </div>
+          <div class="card-body p-4 d-flex flex-column">
+            <div id="chatContainer" class="flex-grow-1 mb-4">
+              <div class="message ai">
+                Xin chào! Tôi sẽ giúp bạn hiểu về kết quả chẩn đoán và hướng dẫn bước tiếp theo.
+              </div>
+            </div>
+            <div class="input-group">
+              <input type="text" id="chatInput" class="form-control form-control-lg"
+                placeholder="Hỏi tôi về kết quả chẩn đoán...">
+              <button id="sendBtn" class="btn btn-success btn-lg px-4">
+                <i class="fas fa-paper-plane"></i>
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Footer -->
+  <footer>
+    <p class="mb-0">© 2025 AI Da Liễu — ResNet50 + Gemini RAG | Made with Love for sức khỏe</p>
+  </footer>
+
+  <!-- Bootstrap JS -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+  <script>
+    // === MAPPING BỆNH TỪ BACKEND (ĐÚNG NHƯ app.py) ===
+    const DISEASES = {
+      'akiec': { short: 'AKIEC', full: 'Tổn thương tiền ung thư da (Actinic Keratoses / Intraepithelial Carcinoma)', badge: 'akiec' },
+      'bcc': { short: 'BCC', full: 'Ung thư biểu mô tế bào đáy (Basal Cell Carcinoma)', badge: 'bcc' },
+      'bkl': { short: 'BKL', full: 'Tổn thương lành tính dạng dày sừng (Benign Keratosis-like Lesions)', badge: 'bkl' },
+      'df': { short: 'DF', full: 'U xơ da lành tính (Dermatofibroma)', badge: 'df' },
+      'mel': { short: 'MEL', full: 'U hắc tố ác tính (Melanoma - Ung thư da hắc tố)', badge: 'mel' },
+      'nv': { short: 'NV', full: 'Nốt ruồi / Nốt sắc tố lành tính (Melanocytic Nevi)', badge: 'nv' },
+      'vasc': { short: 'VASC', full: 'Tổn thương mạch máu (Vascular Lesions)', badge: 'vasc' }
+    };
+
+    // === ELEMENTS ===
+    const video = document.getElementById("video");
+    const canvas = document.getElementById("canvas");
+    const imageUpload = document.getElementById("imageUpload");
+    const analyzeUploadBtn = document.getElementById("analyzeUploadBtn");
+    const captureAndAnalyzeBtn = document.getElementById("captureAndAnalyzeBtn");
+    const loading = document.getElementById("loading");
+    const result = document.getElementById("result");
+    const uploadPreview = document.getElementById("uploadPreview");
+    const capturedPreview = document.getElementById("capturedPreview");
+
+    let capturedBlob = null;
+
+    // === CHỌN PHƯƠNG THỨC ===
+    document.getElementById("upload").addEventListener("change", () => {
+      document.getElementById("uploadSection").style.display = "block";
+      document.getElementById("cameraSection").style.display = "none";
+      stopCamera();
+      uploadPreview.classList.add("empty");
+      uploadPreview.innerHTML = "";
+      result.style.display = "none";
+    });
+
+    document.getElementById("camera").addEventListener("change", async () => {
+      document.getElementById("uploadSection").style.display = "none";
+      document.getElementById("cameraSection").style.display = "block";
+      capturedBlob = null;
+      capturedPreview.classList.add("empty");
+      capturedPreview.innerHTML = "";
+      result.style.display = "none";
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment", width: { ideal: 1280 }, height: { ideal: 720 } }
+        });
+        video.srcObject = stream;
+      } catch (err) {
+        alert("Không truy cập được camera: " + err.message + "\n\nThử lại hoặc dùng chế độ tải ảnh.");
+      }
+    });
+
+    function stopCamera() {
+      if (video.srcObject) {
+        video.srcObject.getTracks().forEach(t => t.stop());
+        video.srcObject = null;
+      }
+    }
+
+    // === UPLOAD PREVIEW ===
+    imageUpload.addEventListener("change", () => {
+      const file = imageUpload.files[0];
+      if (!file) return;
+      const url = URL.createObjectURL(file);
+      uploadPreview.classList.remove("empty");
+      uploadPreview.innerHTML = `<img src="${url}" class="img-fluid" loading="lazy">`;
+      analyzeUploadBtn.disabled = false;
+      analyzeUploadBtn.innerHTML = '<i class="fas fa-brain me-2"></i>Phân tích ảnh này';
+    });
+
+    // === CAPTURE & ANALYZE ===
+    captureAndAnalyzeBtn.addEventListener("click", () => {
+      if (video.videoWidth === 0) {
+        alert("Camera chưa sẵn sàng! Vui lòng đợi 2 giây.");
+        return;
+      }
+      captureAndAnalyzeBtn.innerHTML = '<i class="fas fa-spinner fa-spin me-2"></i>Đang chụp...';
+      captureAndAnalyzeBtn.disabled = true;
+
+      const ctx = canvas.getContext("2d");
+      canvas.width = video.videoWidth;
+      canvas.height = video.videoHeight;
+      ctx.drawImage(video, 0, 0);
+
+      canvas.toBlob(blob => {
+        capturedBlob = blob;
+        const url = URL.createObjectURL(blob);
+        capturedPreview.classList.remove("empty");
+        capturedPreview.innerHTML = `<img src="${url}" class="img-fluid" loading="lazy">`;
+        setTimeout(() => analyzeImage(blob, "captured_skin.jpg"), 500);
+      }, "image/jpeg", 0.92);
+    });
+
+    // === ANALYZE UPLOAD ===
+    analyzeUploadBtn.addEventListener("click", () => {
+      const file = imageUpload.files[0];
+      if (!file) return;
+      analyzeImage(file, file.name);
+    });
+
+    // === ANALYZE IMAGE ===
+    async function analyzeImage(fileBlob, filename) {
+      const formData = new FormData();
+      formData.append("image", fileBlob, filename);
+
+      loading.style.display = "block";
+      result.style.display = "none";
+      analyzeUploadBtn.disabled = true;
+      captureAndAnalyzeBtn.disabled = true;
+
+      try {
+        const res = await fetch("/predict", { method: "POST", body: formData });
+        const data = await res.json();
+        if (data.error) throw new Error(data.error);
+
+        // === XỬ LÝ TÊN BỆNH CHÍNH XÁC 100% ===
+        const label = data.label.trim();
+        const key = label.split(' - ')[0].toLowerCase(); // "akiec"
+        const disease = DISEASES[key] || { short: '???', full: 'Không xác định', badge: 'bkl' };
+
+        const shortCode = disease.short;
+        const fullName = disease.full;
+        const badgeClass = disease.badge;
+
+        result.innerHTML = `
+  <div class="card result-card">
+    <div class="card-body text-center p-5">
+      <img src="data:image/jpeg;base64,${data.image_base64}" class="img-fluid rounded-3 shadow-lg mb-4" style="max-height:240px; width:100%; object-fit:cover;">
+      <h4 class="mb-4 text-danger fw-bold">
+        <i class="fas fa-exclamation-triangle me-2"></i>Kết quả AI
+      </h4>
+
+      <!-- Nhãn bệnh -->
+      <div class="mb-4">
+        <span class="result-badge ${badgeClass} fs-4 px-4 py-2 d-inline-block">${shortCode}</span>
+      </div>
+      <h5 class="mb-3 fw-bold text-primary">${fullName}</h5>
+
+      <!-- Độ tin cậy -->
+      <p class="mb-4 fs-5 text-dark">
+        <i class="fas fa-chart-line text-success me-2"></i>
+        <strong>Độ tin cậy:</strong> ${(data.confident * 100).toFixed(2)}%
+      </p>
+
+      <!-- Mô tả -->
+      <div class="alert alert-warning rounded-4 p-4 shadow-sm" style="text-align: left; line-height:1.5; font-size:18px;">
+        <i class="fas fa-info-circle text-warning me-2"></i>
+        <strong style="color:blue;">Thông tin loại bệnh:</strong><br>${data.treatment.replace(/\n/g, '<br>')}
+      </div>
+
+      <button onclick="autoAskAI('${shortCode}')" class="btn btn-success btn-lg w-100 mt-3">
+        <i class="fas fa-robot me-2"></i>Hỏi AI tư vấn chi tiết
+      </button>
+    </div>
+  </div>
+`;
+        result.style.display = "block";
+
+      } catch (err) {
+        result.innerHTML = `
+          <div class="alert alert-danger rounded-4 p-5 text-center shadow-lg">
+            <i class="fas fa-exclamation-triangle fa-3x mb-3 text-danger"></i>
+            <h4 class="mb-3">Lỗi xử lý ảnh</h4>
+            <p class="mb-0">${err.message}</p>
+          </div>
+        `;
+        result.style.display = "block";
+      } finally {
+        loading.style.display = "none";
+        analyzeUploadBtn.disabled = false;
+        captureAndAnalyzeBtn.disabled = false;
+        captureAndAnalyzeBtn.innerHTML = '<i class="fas fa-camera me-2"></i>Chụp & Phân tích ngay';
+      }
+    }
+
+    // === AUTO ASK AI ===
+    function autoAskAI(shortCode) {
+      sendToChatbot(`Tôi được chẩn đoán "${shortCode}". Tôi nên làm gì tiếp theo? Cung cấp lộ trình điều trị và lời khuyên cụ thể nhất.`);
+    }
+
+    // === CHATBOT ===
+    const chatInput = document.getElementById("chatInput");
+    const sendBtn = document.getElementById("sendBtn");
+    const chatContainer = document.getElementById("chatContainer");
+
+    function formatMessage(text) {
+      return text
+        .replace(/\*\*(.*?)\*\*/g, '<strong class="text-danger fw-bold">$1</strong>')
+        .replace(/• /g, '<span class="text-primary fw-semibold me-2">•</span>')
+        .replace(/- /g, '<span class="text-primary fw-semibold me-2">•</span>')
+        .replace(/\n/g, '<br>')
+        .replace(/\[(Nguồn: .*?)\]/g, '<br><small class="text-muted d-block mt-2 bg-light px-2 py-1 rounded-pill">$1</small>');
+    }
+
+    function renderChat(messages = []) {
+      chatContainer.innerHTML = `
+        <div class="message ai">
+          Xin chào! Tôi sẽ giúp bạn hiểu về kết quả chẩn đoán và hướng dẫn bước tiếp theo.
+        </div>
+      `;
+
+      messages.forEach(m => {
+        const div = document.createElement("div");
+        div.className = `message ${m.role === "user" ? "user" : "ai"}`;
+        div.innerHTML = formatMessage(m.content);
+        chatContainer.appendChild(div);
+      });
+
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+    }
+
+    async function loadChatHistory() {
+      try {
+        const res = await fetch("/get_history");
+        const data = await res.json();
+        renderChat(data.history || []);
+      } catch (e) {
+        renderChat();
+      }
+    }
+
+    async function sendToChatbot(msg) {
+      if (!msg.trim()) return;
+
+      const userDiv = document.createElement("div");
+      userDiv.className = "message user";
+      userDiv.innerHTML = msg.replace(/\n/g, '<br>');
+      chatContainer.appendChild(userDiv);
+      chatContainer.scrollTop = chatContainer.scrollHeight;
+
+      chatInput.value = "";
+      sendBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+      try {
+        const res = await fetch("/chat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ message: msg })
+        });
+        const data = await res.json();
+
+        const aiDiv = document.createElement("div");
+        aiDiv.className = "message ai";
+        aiDiv.innerHTML = formatMessage(data.response);
+        chatContainer.appendChild(aiDiv);
+
+        loadChatHistory();
+
+      } catch (e) {
+        const errDiv = document.createElement("div");
+        errDiv.className = "message ai";
+        errDiv.innerHTML = "Lỗi kết nối. Vui lòng thử lại.";
+        chatContainer.appendChild(errDiv);
+      } finally {
+        sendBtn.innerHTML = '<i class="fas fa-paper-plane"></i>';
+        chatContainer.scrollTop = chatContainer.scrollHeight;
+      }
+    }
+
+    sendBtn.addEventListener("click", () => sendToChatbot(chatInput.value.trim()));
+    chatInput.addEventListener("keypress", e => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendToChatbot(chatInput.value.trim());
+      }
+    });
+
+    // === XÓA HOÀN TOÀN KHI LOAD TRANG ===
+    window.addEventListener('load', function () {
+      localStorage.removeItem("chatHistory");
+      fetch('/reset', { method: 'POST' }).catch(() => { });
+      loadChatHistory();
+      chatInput.focus();
+    });
+  </script>
+</body>
+
+</html>

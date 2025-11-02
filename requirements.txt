@@ -1,0 +1,13 @@
+torch
+torchvision
+google-generativeai
+flask
+pillow
+numpy
+PyMuPDF
+langchain
+sentence-transformers
+faiss-cpu
+fitz
+langchain-google-genai
+python-dotenv
