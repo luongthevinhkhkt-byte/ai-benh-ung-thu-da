@@ -11,7 +11,7 @@ import PyPDF2
 import numpy as np
 from sklearn.metrics.pairwise import cosine_similarity
 
-# ResNet
+# ResNet18
 import torch
 import torch.nn as nn
 from torchvision import models, transforms
@@ -36,48 +36,55 @@ CLASSES = [
     "vasc - Tổn thương mạch máu (Vascular Lesions)"
 ]
 
-
-# === TRANSFORM CHUẨN NHƯ LÚC TRAIN ===
-# 600x450 → CenterCrop(224) → đúng input ResNet50
+# === TRANSFORM CHUẨN NHƯ LÚC TRAIN (ResNet18 dùng input 224x224) ===
 transform = transforms.Compose([
     transforms.Resize((600, 450)),
-    transforms.CenterCrop(224),  # QUAN TRỌNG: Cắt giữa → 224x224
+    transforms.CenterCrop(224),
     transforms.ToTensor(),
     transforms.Normalize([0.485, 0.456, 0.406], [0.229, 0.224, 0.225])
 ])
 
-# === GEMINI ===
+# === GEMINI CONFIG ===
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-# === RESNET ===
+# === RESNET18 MODEL LOADER ===
 @torch.no_grad()
-def load_resnet_model():
-    model = models.resnet50(weights='IMAGENET1K_V1')
-    model.fc = nn.Linear(model.fc.in_features, 7)
-    model_path = "Mo_Hinh/mo_hinh_resnet50_fine_tune.pth"
+def load_resnet18_model():
+    # Load ResNet18 với trọng số ImageNet
+    model = models.resnet18(weights='IMAGENET1K_V1')
+    
+    # Thay lớp fully connected để phân loại 7 lớp
+    num_ftrs = model.fc.in_features
+    model.fc = nn.Linear(num_ftrs, 7)
+    
+    # Đường dẫn mô hình đã fine-tune
+    model_path = "Mo_Hinh/mo_hinh_RESNET18.pth"
+    
     if os.path.exists(model_path):
         try:
-            state = torch.load(model_path, map_location='cpu')
-            model.load_state_dict(state)
+            state_dict = torch.load(model_path, map_location='cpu')
+            model.load_state_dict(state_dict)
             model.eval()
-            print(f"Model loaded: {model_path}")
+            print(f"[MODEL] ResNet18 loaded: {model_path}")
         except Exception as e:
-            print(f"Load model error: {e}")
+            print(f"[ERROR] Load ResNet18 model failed: {e}")
     else:
-        print(f"NOT FOUND: {model_path} – Vui lòng kiểm tra đường dẫn!")
+        print(f"[WARNING] Model not found: {model_path} – Using ImageNet weights only!")
+    
     return model
 
-resnet_model = load_resnet_model()
+# Khởi tạo mô hình
+resnet_model = load_resnet18_model()
 
 def predict_image_pil(img_pil):
-    img = transform(img_pil).unsqueeze(0)
+    img = transform(img_pil).unsqueeze(0)  # [1, 3, 224, 224]
     with torch.no_grad():
         outputs = resnet_model(img)
         probs = torch.softmax(outputs, dim=1).cpu().numpy()[0]
         idx = int(np.argmax(probs))
         conf = float(probs[idx])
-        print(f"[DEBUG] Predicted: Index={idx} → {CLASSES[idx].split()[0]} | Confidence={conf:.3f}")
-    return idx, probs, float(probs[idx])
+        print(f"[PREDICT] Class: {CLASSES[idx].split()[0]} | Confidence: {conf:.4f}")
+    return idx, probs, conf
 
 # === TREATMENT PLAN ===
 def get_treatment_plan(key):
@@ -191,7 +198,7 @@ def add_to_history(role, text):
     hist = session.get("chat_history", [])
     prefix = "Bạn: " if role == "user" else "Trợ lý: "
     hist.append(f"{prefix}{text}")
-    session["chat_history"] = hist[-4:]  # Giữ tối đa 4 lượt
+    session["chat_history"] = hist[-4:]
     session.modified = True
 
 def get_recent_context():
@@ -232,7 +239,7 @@ def generate_reply(query, rag_context="", recent=""):
         5. **Format rõ ràng**: Chào → Chẩn đoán → Hành động → Lời khuyên → Kết thúc.
         6. Xưng xử **như bác sĩ da liễu chuyên nghiệp**.
         7. Luôn nhắc người dùng: **Đây chỉ là thông tin tham khảo. Hãy gặp bác sĩ để được tư vấn chính xác.**
-        8. Tác giả tạo ra dự án này: Học sinh: Nguyễn Thành Đạt, Nguyễn Gia Bảo, Giáo viên hướng dẫn: Lê Thị Hai, Đơn vị: Trường THCS Lương Thế Vinh. Công nghệ sử dụng: Finetuned ResNet50, Gemini 2.5, RAG với Google Embedding-004, không cần trả lời nếu không cần thiết và người dùng không hỏi tác giả là ai.
+        8. Tác giả tạo ra dự án này: Học sinh: Nguyễn Thành Đạt, Nguyễn Gia Bảo, Giáo viên hướng dẫn: Lê Thị Hai, Đơn vị: Trường THCS Lương Thế Vinh. Công nghệ sử dụng: Finetuned ResNet18, Gemini 2.5, RAG với Google Embedding-004, không cần trả lời nếu không cần thiết và người dùng không hỏi tác giả là ai.
         ---
 
         **Câu hỏi người dùng:** {query}
@@ -282,7 +289,7 @@ def generate_reply(query, rag_context="", recent=""):
 # === ROUTES ===
 @app.route("/")
 def index():
-    session["chat_history"] = []  # XÓA LỊCH SỬ KHI VÀO TRANG
+    session["chat_history"] = []
     return render_template("index.html")
 
 @app.route("/chat", methods=["POST"])
@@ -318,7 +325,7 @@ def predict():
         label = CLASSES[idx]
         key_short = label.split()[0].lower()
 
-        # Convert ảnh sang base64 để trả về hiển thị
+        # Convert ảnh sang base64 để hiển thị
         buf = io.BytesIO()
         img.save(buf, "JPEG")
         b64 = base64.b64encode(buf.getvalue()).decode()
@@ -335,7 +342,6 @@ def predict():
     except Exception as e:
         print(f"Predict error: {e}")
         return jsonify({"error": "Lỗi xử lý ảnh"}), 500
-
 
 @app.route("/reset", methods=["POST"])
 def reset_session():
