@@ -9,5 +9,4 @@ langchain
 sentence-transformers
 faiss-cpu
 fitz
-langchain-google-genai
 python-dotenv
