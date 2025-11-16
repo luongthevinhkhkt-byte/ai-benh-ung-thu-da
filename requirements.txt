@@ -5,7 +5,6 @@ flask
 pillow
 numpy
 PyMuPDF
-langchain
 sentence-transformers
 faiss-cpu
 fitz
