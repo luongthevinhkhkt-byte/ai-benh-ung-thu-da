@@ -164,7 +164,7 @@ def generate_reply(query, recent=""):
         **TRẢ LỜI NGẮN GỌN, RÕ RÀNG, KHÔNG DÀI DÒNG.**
         """
     try:
-        model = genai.GenerativeModel("gemini-1.5-flash")  # Dùng flash nhanh + nhẹ
+        model = genai.GenerativeModel("gemini-2.5-flash-lite")  # Dùng flash nhanh + nhẹ
         res = model.generate_content(prompt, generation_config={"max_output_tokens": 300})
         response = (res.text or "").strip()
         if "tham khảo" not in response.lower():
